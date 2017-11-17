@@ -1,0 +1,242 @@
+#pragma kernel LocalPrefixSum
+#pragma kernel GlobalPrefixSum
+#pragma kernel RadixReorder
+
+StructuredBuffer<uint> KeysIn;
+RWStructuredBuffer<uint2> BucketsOut;
+RWStructuredBuffer<uint2> GlobalDigitPrefixSumOut;
+RWStructuredBuffer<uint2> GlobalPrefixSumOut;
+
+RWStructuredBuffer<uint> KeysOut;
+StructuredBuffer<uint2> BucketsIn;
+StructuredBuffer<uint2> GlobalDigitPrefixSumIn;
+StructuredBuffer<uint2> GlobalPrefixSumIn;
+
+StructuredBuffer<float3> _Points;
+
+struct DepthAndValueScans {
+	uint depth;
+	uint valueScan;
+};
+
+RWStructuredBuffer<DepthAndValueScans> DepthValueScanOut;
+StructuredBuffer<DepthAndValueScans> DepthValueScanIn;
+
+#define INTRA_WARP_SCAN
+
+#define WARP_SIZE 32
+#define GROUP_SIZE 512
+
+#if WARP_SIZE == 64
+#define WARP_SHIFT 6   // == log2(64)
+#elif WARP_SIZE == 32
+#define WARP_SHIFT 5   // == log2(32)
+#elif WARP_SIZE == 16                  //optimal for adreno 510
+#define WARP_SHIFT 4   // == log2(16)
+#endif
+
+groupshared uint2 temp[GROUP_SIZE];
+
+int bitshift;
+float4x4 model;
+float3 camPos;
+float scaledMaxDistance;
+float3 objectWorldPos;
+float depthIndices;
+
+//source for intra warp scan: 
+//http://research.nvidia.com/sites/default/files/publications/nvr-2008-003.pdf
+
+
+
+uint2 ScanWarp(uint index, uint lane)
+{
+	if (lane >= 1)
+		temp[index] = temp[index - 1] + temp[index];
+	if (lane >= 2)
+		temp[index] = temp[index - 2] + temp[index];
+	if (lane >= 4)
+		temp[index] = temp[index - 4] + temp[index];
+	if (lane >= 8)
+		temp[index] = temp[index - 8] + temp[index];
+#if WARP_SIZE >= 32
+	if (lane >= 16)
+		temp[index] = temp[index - 16] + temp[index];
+#endif
+#if WARP_SIZE >= 64
+	if (lane >= 32)
+		temp[index] = temp[index - 32] + temp[index];
+#endif
+	return lane > 0 ? temp[index - 1] : uint2(0,0); //0;
+}
+
+uint2 ScanWarpInclusive(uint index, uint lane)
+{
+	if (lane >= 1)
+		temp[index] = temp[index - 1] + temp[index];
+	if (lane >= 2)
+		temp[index] = temp[index - 2] + temp[index];
+	if (lane >= 4)
+		temp[index] = temp[index - 4] + temp[index];
+	if (lane >= 8)
+		temp[index] = temp[index - 8] + temp[index];
+#if WARP_SIZE >= 32
+	if (lane >= 16)
+		temp[index] = temp[index - 16] + temp[index];
+#endif
+#if WARP_SIZE >= 64
+	if (lane >= 32)
+		temp[index] = temp[index - 32] + temp[index];
+#endif
+	return temp[index];
+}
+
+uint2 ScanGroup(uint index)
+{
+	uint lane = index & (WARP_SIZE - 1); // index of thread in warp (0..31)
+	uint warpId = index >> WARP_SHIFT;
+
+	// Step 1: Intra-warp scan in each warp
+	uint2 val = ScanWarpInclusive(index, lane);
+	GroupMemoryBarrierWithGroupSync();
+
+	// Step 2: Collect per-warp partial results
+	if (lane == (WARP_SIZE - 1))
+		temp[warpId] = temp[index];
+	GroupMemoryBarrierWithGroupSync();
+
+	// Step 3: Use 1st warp to scan per-warp results
+	if (warpId == 0)
+		ScanWarpInclusive(index, lane);
+	GroupMemoryBarrierWithGroupSync();
+
+	// Step 4: Accumulate results from Steps 1 and 3
+	if (warpId > 0)
+		val = val + temp[warpId - 1];
+	GroupMemoryBarrierWithGroupSync();
+
+	// Step 5: Write and return the final result
+	temp[index] = val;
+	GroupMemoryBarrierWithGroupSync();
+
+	return val;
+}
+
+[numthreads(GROUP_SIZE, 1, 1)]
+void LocalPrefixSum(uint3 DTid : SV_DispatchThreadID, uint3 groupId : SV_GroupID, uint GI : SV_GroupIndex)
+{	
+	uint key = KeysIn[DTid.x];  //indexAndColor
+	float4 transVert = mul(model, float4(-_Points[key >> 8], 1.0));
+	float depth = dot(transVert.xyz - objectWorldPos, camPos);
+	float relativeDepth = (depth + scaledMaxDistance) / (scaledMaxDistance + scaledMaxDistance);
+	uint intDepth = uint(relativeDepth * depthIndices);	
+	
+	//take two bits of every input element:
+	uint keyBits = 1u - ((intDepth >> bitshift) & 0x1);  // we invert the 0-15 to 15-0 to get a reverse sort	
+    
+	uint2 miniBlock = uint2(keyBits.xx == uint2(0u, 1u));
+
+	temp[GI] = miniBlock;					 
+	GroupMemoryBarrierWithGroupSync();
+
+#if defined(INTRA_WARP_SCAN)
+	uint2 result = ScanGroup(GI);			//counts of 0u, 1u, 2u, 3u
+#else
+	uint2 result;
+	{
+		[unroll(int(log2(GROUP_SIZE)))]
+		for (uint i = 0u; i < uint(log2(GROUP_SIZE)); i++) {		//log2(256) == 8
+			result = temp[GI];
+
+			uint sumOffset = 1 << i;
+			if (GI >= sumOffset) { //step0: ignore first elem, step1: ignore first 2 elems, step1: ignore first 4 elems, etc.
+				result += temp[GI - sumOffset];
+			}
+			GroupMemoryBarrierWithGroupSync();
+			temp[GI] = result;
+			GroupMemoryBarrierWithGroupSync();
+		}
+	}
+#endif
+
+	DepthValueScanOut[DTid.x].depth = keyBits;
+	DepthValueScanOut[DTid.x].valueScan = result[keyBits];
+
+	//Final counts for each block:
+	if (GI == (GROUP_SIZE - 1u)) {
+		BucketsOut[groupId.x] = result;
+	}
+}
+
+[numthreads(GROUP_SIZE, 1, 1)]
+void GlobalPrefixSum(uint3 DTid : SV_DispatchThreadID, uint3 groupId : SV_GroupID, uint GI : SV_GroupIndex)
+{
+	temp[GI] = BucketsIn[GI];
+	GroupMemoryBarrierWithGroupSync();
+
+#if defined(INTRA_WARP_SCAN)
+	uint2 result = ScanGroup(GI);
+#else
+	uint2 result;
+	{
+		[unroll(int(log2(GROUP_SIZE)))]
+		for (uint i = 0u; i < uint(log2(GROUP_SIZE)); i++) {		//log2(256) == 8
+			result = temp[GI];
+
+			uint sumOffset = 1 << i;
+			if (GI >= sumOffset) { //step0: ignore first elem, step1: ignore first 2 elems, step1: ignore first 4 elems, etc.
+				result += temp[GI - sumOffset];
+			}
+			GroupMemoryBarrierWithGroupSync();
+			temp[GI] = result;
+			GroupMemoryBarrierWithGroupSync();
+		}
+	}
+#endif
+
+	GlobalPrefixSumOut[GI] = result;
+
+	if (GI == (GROUP_SIZE - 1u)) {
+		//Here we scan the counts of the 16 values, in order to get their base indices.
+
+		//exclusive scan:
+		//uint2 prefixSums = uint2(0u, result.x);
+		//prefixSums.x = 0u;
+		//prefixSums.y = prefixSums.x + result.x;
+		//prefixSums.z = prefixSums.y + result.y;
+		//prefixSums.w = prefixSums.z + result.z;
+
+		GlobalDigitPrefixSumOut[0] = uint2(0u, result.x);//prefixSums;
+	}
+}
+
+[numthreads(GROUP_SIZE, 1, 1)]
+void RadixReorder(uint3 groupThreadId : SV_GroupThreadID, uint3 DTid : SV_DispatchThreadID, uint3 groupId : SV_GroupID, uint GI : SV_GroupIndex)
+{
+	DepthAndValueScans depthValueScans = DepthValueScanIn[DTid.x];
+	uint keyBits = depthValueScans.depth;
+	uint localOffset = depthValueScans.valueScan; //ValueScans, every 16th value is a partial prefix sum of the same value.
+
+	//Correct the ValueScans according to the Global offset:
+	if (groupId.x > 0) {
+		uint2 prevBlockFinalSum = GlobalPrefixSumIn[groupId.x - 1]; //this gives a new sum for each increase in GI. While we want the same for this group, right?
+		uint prevSum0 = prevBlockFinalSum[keyBits];
+		localOffset += prevSum0;
+	}
+
+	uint key = KeysIn[DTid.x];  //indexAndColor
+	uint globalOffset = GlobalDigitPrefixSumIn[0][keyBits];
+
+	uint newIndex = globalOffset + localOffset - 1u;
+
+	//Very uncoalesced writes...
+	KeysOut[newIndex] = key;
+}
+
+
+
+
+
+
+
+
