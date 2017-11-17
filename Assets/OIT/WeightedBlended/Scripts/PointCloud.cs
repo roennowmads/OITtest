@@ -518,8 +518,8 @@ public class PointCloud : MonoBehaviour {
         Debug.Log("Number of points: " + m_pointsCount);
 
         commandBuffer = new CommandBuffer();
-        commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 0, MeshTopology.Triangles, m_indexComputeBuffers[m_frameIndex].count * 6);
-        //commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 0, MeshTopology.Points, m_indexComputeBuffers[m_frameIndex].count);
+        commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 1, MeshTopology.Triangles, m_indexComputeBuffers[m_frameIndex].count * 6);
+        commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 0, MeshTopology.Triangles, m_indexComputeBuffers[m_frameIndex].count * 6);    
     }
 	
 	// Update is called once per frame
