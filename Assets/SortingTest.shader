@@ -153,8 +153,12 @@ Shader "Unlit/SortingTest" {
 				fixed albedo = tex2D(_AlbedoTex, i.texCoord).a;
 				//o.color = fixed4(/*i.color*/fixed3(0.5,0.1,0.1), albedo*0.0525);
 
+				if (albedo < 0.1) {
+					discard;
+				} 
+
 				//good for fireball:
-				o.color = fixed4(i.color, 1.0/*albedo*//**0.25*/);
+				o.color = fixed4(i.color, albedo/**0.25*/);
 				return o;
 			}
 			ENDCG

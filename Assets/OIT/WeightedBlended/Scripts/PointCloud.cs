@@ -9,13 +9,14 @@ using System.Runtime.InteropServices;
 using System;
 using System.Linq;
 
-[ExecuteInEditMode]
 public class PointCloud : MonoBehaviour {
     public string m_valueDataPath = "OilRigData";
     public int m_lastFrameIndex = 25;
     
     public float m_frameSpeed = 0.5f;
     public int m_textureSideSizePower = 14;
+
+    public Texture2D particleTexture;
 
     private int m_pointsCount = 61440;
     private Renderer pointRenderer;
@@ -393,7 +394,7 @@ public class PointCloud : MonoBehaviour {
         //pointRenderer.material.mainTexture = texture;
         //pointRenderer.material.SetTexture("_MainTex2", texture2);
         pointRenderer.sharedMaterial.SetTexture("_ColorTex", colorTexture);
-
+        pointRenderer.sharedMaterial.SetTexture("_AlbedoTex", particleTexture);
 
         /*List<int> indices = new List<int>();
 
@@ -518,6 +519,7 @@ public class PointCloud : MonoBehaviour {
 
         commandBuffer = new CommandBuffer();
         commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 0, MeshTopology.Triangles, m_indexComputeBuffers[m_frameIndex].count * 6);
+        //commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 0, MeshTopology.Points, m_indexComputeBuffers[m_frameIndex].count);
     }
 	
 	// Update is called once per frame
