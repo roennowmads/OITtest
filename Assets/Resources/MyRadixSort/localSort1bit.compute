@@ -22,7 +22,7 @@ struct DepthAndValueScans {
 RWStructuredBuffer<DepthAndValueScans> DepthValueScanOut;
 StructuredBuffer<DepthAndValueScans> DepthValueScanIn;
 
-#define INTRA_WARP_SCAN
+//#define INTRA_WARP_SCAN
 
 #define WARP_SIZE 32
 #define GROUP_SIZE 512

@@ -163,7 +163,7 @@ Shader "Unlit/SortingTest" {
 				} 
 
 				//good for fireball:
-				o.color = fixed4(i.color, albedo/**0.25*/);
+				o.color = fixed4(i.color, albedo*0.25);
 				return o;
 			}
 			ENDCG

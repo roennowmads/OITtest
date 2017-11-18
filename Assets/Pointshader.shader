@@ -8,7 +8,7 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 		//ZWrite Off
 
 		Pass { // some shaders require multiple passes
-			ColorMask 0
+			//ColorMask 0
 
 			GLSLPROGRAM
 			#version 310 es
@@ -116,7 +116,7 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 
 				float radius = 1.0;
 
-				gl_PointSize = /*pointSizeScaleIndependent*pointSizeScale**/ 0.5*5.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
+				gl_PointSize = /*pointSizeScaleIndependent*pointSizeScale**/ 0.25*5.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
 
 				//gl_PointSize = pointSizeScaleIndependent*pointSizeScale* 511.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
 				//gl_PointSize = pointSizeScaleIndependent*pointSizeScale* 402.0 * gl_ProjectionMatrix[1][1] * orthographicSizeScale * radius / gl_Position.w; // Tango tablet // for orthographic 
@@ -170,7 +170,7 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 
 				SV_Target0.xyz = vs_COLOR0;
 				//SV_Target0.xyz = vec3(c);//vec3(gl_FragCoord.xy / _ScreenParams.xy, 0.0);//vs_COLOR0;
-				SV_Target0.w = albedo;//0.1;//0.1;//albedo*0.25;
+				SV_Target0.w = albedo*0.25;//0.1;//0.1;//albedo*0.25;
 
 			}
 
@@ -292,7 +292,7 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 
 				float radius = 1.0;
 
-				gl_PointSize = /*pointSizeScaleIndependent*pointSizeScale**/ 0.5*5.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
+				gl_PointSize = /*pointSizeScaleIndependent*pointSizeScale**/ 0.25*5.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
 
 				//gl_PointSize = pointSizeScaleIndependent*pointSizeScale* 511.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
 				//gl_PointSize = pointSizeScaleIndependent*pointSizeScale* 402.0 * gl_ProjectionMatrix[1][1] * orthographicSizeScale * radius / gl_Position.w; // Tango tablet // for orthographic 
@@ -346,7 +346,7 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 
 				SV_Target0.xyz = vs_COLOR0;
 				//SV_Target0.xyz = vec3(c);//vec3(gl_FragCoord.xy / _ScreenParams.xy, 0.0);//vs_COLOR0;
-				SV_Target0.w = albedo;//0.1;//0.1;//albedo*0.25;
+				SV_Target0.w = albedo*0.25;//0.1;//0.1;//albedo*0.25;
 
 			}
 
