@@ -180,12 +180,13 @@ public class PointCloud : MonoBehaviour {
 
             //try to cut the size to something like 4096
             
-            ComputeBuffer indexComputeBuffer = new ComputeBuffer(bufferSize, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Default);
+            if (bufferSize > 0) {
+                ComputeBuffer indexComputeBuffer = new ComputeBuffer(bufferSize, Marshal.SizeOf(typeof(uint)), ComputeBufferType.Default);
 
-            indexComputeBuffer.SetData(zeroedBytes);
+                indexComputeBuffer.SetData(zeroedBytes);  
 
-            computeBuffers.Add(indexComputeBuffer);
-
+                computeBuffers.Add(indexComputeBuffer);
+            }
             //int frameSize = bytes.Length;
             //Buffer.BlockCopy(bytes, 0, vals, k * frameSize, frameSize);
         }  
@@ -518,10 +519,10 @@ public class PointCloud : MonoBehaviour {
         Debug.Log("Number of points: " + m_pointsCount);
 
         commandBuffer = new CommandBuffer();
-        //commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 1, MeshTopology.Triangles, m_indexComputeBuffers[m_frameIndex].count * 6);
-        //commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 0, MeshTopology.Triangles, m_indexComputeBuffers[m_frameIndex].count * 6); 
-        commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 1, MeshTopology.Points, m_indexComputeBuffers[m_frameIndex].count);
-        commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 0, MeshTopology.Points, m_indexComputeBuffers[m_frameIndex].count);  
+        commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 1, MeshTopology.Triangles, m_indexComputeBuffers[m_frameIndex].count * 6);
+        commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 0, MeshTopology.Triangles, m_indexComputeBuffers[m_frameIndex].count * 6); 
+        //commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 1, MeshTopology.Points, m_indexComputeBuffers[m_frameIndex].count);
+        //commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 0, MeshTopology.Points, m_indexComputeBuffers[m_frameIndex].count);  
     }
 	
 	// Update is called once per frame
@@ -532,8 +533,14 @@ public class PointCloud : MonoBehaviour {
         m_accumulation += Time.timeScale / Time.deltaTime;
 
         if (m_currentTimeFrames >= m_frameSpeed) {
-            m_frameIndex = (m_frameIndex + 1) % m_lastFrameIndex;
+            m_frameIndex = (m_frameIndex + 1) % (m_lastFrameIndex-1);
             m_currentTimeFrames = 0;
+
+            commandBuffer.Clear();
+            commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 1, MeshTopology.Triangles, m_indexComputeBuffers[m_frameIndex].count * 6);
+            commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 0, MeshTopology.Triangles, m_indexComputeBuffers[m_frameIndex].count * 6); 
+            //commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 1, MeshTopology.Points, m_indexComputeBuffers[m_frameIndex].count);
+            //commandBuffer.DrawProcedural(pointRenderer.localToWorldMatrix, pointRenderer.sharedMaterial, 0, MeshTopology.Points, m_indexComputeBuffers[m_frameIndex].count); 
         }
 
         if (m_currentTime >= m_updateFrequency)
@@ -550,6 +557,7 @@ public class PointCloud : MonoBehaviour {
         pointRenderer.sharedMaterial.SetInt("_FrameTime", m_frameIndex);
         float aspect = Camera.main.GetComponent<Camera>().aspect;
         pointRenderer.sharedMaterial.SetFloat("aspect", aspect);
+
     }
 
     /*private void OnGUI()
@@ -594,9 +602,7 @@ public class PointCloud : MonoBehaviour {
         m_myRadixSort.SetBuffer(LocalPrefixSum, "DepthValueScanOut", depthsAndValueScansList[m_frameIndex]);
 
         m_myRadixSort.SetBuffer(GlobalPrefixSum, "BucketsIn", bucketsList[m_frameIndex]);
-        m_myRadixSort.SetBuffer(RadixReorder, "DepthValueScanIn", depthsAndValueScansList[m_frameIndex]);
-
-        pointRenderer.sharedMaterial.SetBuffer("_IndicesValues", inOutBufferList[m_frameIndex][0]);
+        m_myRadixSort.SetBuffer(RadixReorder, "DepthValueScanIn", depthsAndValueScansList[m_frameIndex]); 
 
         int outSwapIndex = 1;
         for (int i = 0; i < numberOfRadixSortPasses; i++) {
@@ -612,7 +618,9 @@ public class PointCloud : MonoBehaviour {
             m_myRadixSort.Dispatch(LocalPrefixSum, actualNumberOfThreadGroupsList[m_frameIndex] / m_elemsPerThread, 1, 1);
             m_myRadixSort.Dispatch(GlobalPrefixSum, 1, 1, 1);
             m_myRadixSort.Dispatch(RadixReorder, actualNumberOfThreadGroupsList[m_frameIndex] / m_elemsPerThread, 1, 1);
-        }                                                  
+        }    
+        
+        pointRenderer.sharedMaterial.SetBuffer("_IndicesValues", inOutBufferList[m_frameIndex][0]);
 
         //pointRenderer.sharedMaterial.SetPass(0);
         //pointRenderer.sharedMaterial.SetMatrix("model", pointRenderer.localToWorldMatrix);
