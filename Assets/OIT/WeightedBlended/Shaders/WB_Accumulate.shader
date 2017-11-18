@@ -64,7 +64,7 @@ Shader "Hidden/OIT/Weighted Blended/Accumulate" {
 
 			float w(float z, float alpha) {
 				#ifdef _WEIGHTED0
-					return pow(z, -2.5);
+					return pow(z, -0.5);
 				#elif _WEIGHTED1
 					return alpha * max(1e-2, min(3 * 1e3, 10.0/(1e-5 + pow(z/5, 2) + pow(z/200, 6))));
 				#elif _WEIGHTED2

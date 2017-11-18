@@ -8,7 +8,7 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 		//ZWrite Off
 
 		Pass { // some shaders require multiple passes
-			//ColorMask 0
+			ColorMask 0
 
 			GLSLPROGRAM
 			#version 310 es
