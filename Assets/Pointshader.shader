@@ -63,7 +63,7 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 			//out highp vec4 pos;
 
 			const float inv6 = 1.0 / 6.0;
-			const float inv255 = 2.0 / 255.0;
+			const float inv255 = 1.0 / 255.0;
 
 			vec2 colorCoords = vec2(0.0);
 
@@ -92,6 +92,9 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 				uint index = value >> 8u;
 				float colorValue = float(value & 255u) * inv255;
 
+				if (colorValue == 0.0) {
+					return;
+				}
 
 				//vec3 pos =  vec3(_Points_buf[index].value);
 				//vec3 pos =  vec3(_Points_buf[index].value1, _Points_buf[index].value2, _Points_buf[index].value3); 
@@ -236,7 +239,7 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 			//out highp vec4 pos;
 
 			const float inv6 = 1.0 / 6.0;
-			const float inv255 = 2.0 / 255.0;
+			const float inv255 = 1.0 / 255.0;
 
 			vec2 colorCoords = vec2(0.0);
 
@@ -264,7 +267,10 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 
 				uint index = value >> 8u;
 				float colorValue = float(value & 255u) * inv255;
-
+				
+				if (colorValue == 0.0) {
+					return;
+				}
 
 				//vec3 pos =  vec3(_Points_buf[index].value);
 				//vec3 pos =  vec3(_Points_buf[index].value1, _Points_buf[index].value2, _Points_buf[index].value3); 

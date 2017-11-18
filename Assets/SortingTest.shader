@@ -102,6 +102,10 @@ Shader "Unlit/SortingTest" {
 				float4 position = float4(-_Points[index], 1.0);
 				float colorValue = (value & 0xFF) * inv255;
 
+				if (colorValue == 0) {
+					return;
+				}
+
 				//good for fireball:
 				//o.color = tex2Dlod(_ColorTex, half4(value*2.0, 0, 0, 0)).rgb /** modifier*/;
 				//o.color = tex2Dlod(_ColorTex, half4(pow((value*5.0), .03125), 0, 0, 0)).rgb /** modifier*/;
