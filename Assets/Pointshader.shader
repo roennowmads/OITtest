@@ -113,7 +113,7 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 
 				float radius = 1.0;
 
-				gl_PointSize = /*pointSizeScaleIndependent*pointSizeScale**/ 0.125*5.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
+				gl_PointSize = /*pointSizeScaleIndependent*pointSizeScale**/ 0.5*5.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
 
 				//gl_PointSize = pointSizeScaleIndependent*pointSizeScale* 511.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
 				//gl_PointSize = pointSizeScaleIndependent*pointSizeScale* 402.0 * gl_ProjectionMatrix[1][1] * orthographicSizeScale * radius / gl_Position.w; // Tango tablet // for orthographic 
@@ -286,7 +286,7 @@ Shader "Unlit/SortingTestGLSLPoints" { // defines the name of the shader
 
 				float radius = 1.0;
 
-				gl_PointSize = /*pointSizeScaleIndependent*pointSizeScale**/ 0.125*5.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
+				gl_PointSize = /*pointSizeScaleIndependent*pointSizeScale**/ 0.5*5.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
 
 				//gl_PointSize = pointSizeScaleIndependent*pointSizeScale* 511.0 * gl_ProjectionMatrix[1][1] * radius / gl_Position.w; //Tango device 
 				//gl_PointSize = pointSizeScaleIndependent*pointSizeScale* 402.0 * gl_ProjectionMatrix[1][1] * orthographicSizeScale * radius / gl_Position.w; // Tango tablet // for orthographic 
